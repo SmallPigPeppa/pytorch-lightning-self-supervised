@@ -16,6 +16,8 @@ from pl_bolts.transforms.dataset_normalizations import (
     stl10_normalization,
 )
 
+import os
+# os.environ['CUDA_VISIBLE_DEVICES']='4,5,6,7'
 
 class SyncFunction(torch.autograd.Function):
     @staticmethod
@@ -303,7 +305,8 @@ class SimCLR(LightningModule):
 
 def cli_main():
     from pl_bolts.callbacks.ssl_online import SSLOnlineEvaluator
-    from pl_bolts.datamodules import CIFAR10DataModule, ImagenetDataModule, STL10DataModule
+    from pl_bolts.datamodules import CIFAR10DataModule, STL10DataModule
+    from imagenet_module import ImagenetDataModule
     from pl_bolts.models.self_supervised.simclr.transforms import SimCLREvalDataTransform, SimCLRTrainDataTransform
 
     parser = ArgumentParser()
@@ -356,8 +359,8 @@ def cli_main():
         args.jitter_strength = 1.0
 
         args.batch_size = 64
-        args.num_nodes = 8
-        args.gpus = 8  # per-node
+        args.num_nodes = 1
+        args.gpus = 4  # per-node
         args.max_epochs = 800
 
         args.optimizer = "lars"
@@ -407,14 +410,13 @@ def cli_main():
 
     trainer = Trainer(
         max_epochs=args.max_epochs,
-        max_steps=None if args.max_steps == -1 else args.max_steps,
         gpus=args.gpus,
         num_nodes=args.num_nodes,
         accelerator="ddp" if args.gpus > 1 else None,
         sync_batchnorm=True if args.gpus > 1 else False,
         precision=32 if args.fp32 else 16,
         callbacks=callbacks,
-        fast_dev_run=args.fast_dev_run,
+        fast_dev_run=False,
     )
 
     trainer.fit(model, datamodule=dm)
